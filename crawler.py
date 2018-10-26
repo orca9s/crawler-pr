@@ -1,10 +1,13 @@
 import os
+from urllib import parse
+from urllib.parse import SplitResult
 
 import requests
 from bs4 import BeautifulSoup
 
 file_path = 'episode_list.html'
 url_episode_list = 'http://comic.naver.com/webtoon/list.nhn'
+
 
 params = {
     'titleId': 703845,
@@ -58,5 +61,31 @@ for index, tr in enumerate(tr_list[1:]):
     # 현재 순화중인 tr요소가 클래스 속성값을 가진다면 continue
     if tr.get('class'):
         continue
-    print('=== {} === \n{}\n'.format(index, tr))
+    # print('=== {} === \n{}\n'.format(index, tr))
+
+    # 현재 tr의 첫 번째 td요소의 하위 img태그의 'src'속성값
+    url_thumbnail = tr.select_one('td:nth-of-type(1) img').get('src')
+    # 현재 tr의 첫 번째 td요소의 자식 a태그와 'href'속성값
+    url_detail = tr.select_one('td:nth-of-type(1) > a').get('href')
+    # 강사님 코드는 리스트로 나오는것 중에 0번째 값을 뽑는것
+    query_string = parse.urlsplit(url_detail).query
+    query_dict = parse.parse_qs(query_string)
+    no = query_dict['no'][0]
+    # 내가 짠 코드는 dict로 변환해서 no를 string으로 출력시킨 것
+    # query_string = dict(parse.parse_qsl(parse.urlsplit(url_detail).query))
+    # no = query_string.get('no')
+    print(no)
+
+    # 현재 tr의 두 번째 td요소의 자식 a요소의 내용
+    title = tr.select_one('td:nth-of-type(2) > a').get_text(strip=True)
+    # 현재 tr의 세 번째 td요소의 하위 strong태그의 내용
+    rating = tr.select_one('td:nth-of-type(3) strong').get_text(strip=True)
+    # 현재 tr의 네 번째 td요소의 내용
+    created_date = tr.select_one('td:nth-of-type(4)').get_text(strip=True)
+
+    # print(url_thumbnail)
+    # print(url_detail)
+    # print(title)
+    # print(rating)
+    # print(created_date)
 
