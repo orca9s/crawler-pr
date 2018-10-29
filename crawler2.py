@@ -37,76 +37,86 @@ class Webtoon:
         self.webtoon_id = webtoon_id
         # webtoon 속성 채우기 위해 webtoon_crawler() 실행
         # webtoon_crawler 함수 결과 dict()
-        info = self.webtoon_crawler()
-        self.title = info['title']
-        self.author = info['author']
-        self.description = info['description']
+        self._title = None
+        self._author = None
+        self._description = None
         self.episode_list = list()
+        self._html = ''
 
-    def webtoon_crawler(self):
-        """
-        self.webtoon_id를 사용해서
-        웹툰 title, author,description를 딕셔너리 형태로 return
-        :return:title, author, description 딕셔너리로
-        """
-        # HTML파일을 저장하거나 불러올 경로
-        file_path = 'data/episode_list-{webtoon_id}.html'.format(webtoon_id=self.webtoon_id)
-        # HTTP요청을 보낼 주소
-        url_episode_list = 'http://comic.naver.com/webtoon/list.nhn'
-        # HTTP요청시 전달할 GET Parameters
-        params = {
-            'titleId': self.webtoon_id,
-        }
-        # -> 'http://com....nhn?titleId=703845
+    def _get_info(self, attr_name):
+        if not getattr(self, attr_name):
+            self.set_info()
+        return getattr(self, attr_name)
 
-        # HTML파일이 로컬에 저장되어 있는지 검사
-        if os.path.exists(file_path):
-            # 저장되어 있다면, 해당 파일을 읽어서 html변수에 할당
-            html = open(file_path, 'rt').read()
-        else:
-            # 저장되어 있지 않다면, requests를 사용해 HTTP GET요청
-            response = requests.get(url_episode_list, params)
-            print(response.url)
-            # 요청 응답객체의 text속성값을 html변수에 할당
-            html = response.text
-            # 받은 텍스트 데이터를 HTML파일로 저장
-            open(file_path, 'wt').write(html)
+    @property
+    def title(self):
+        return self._get_info('_title')
+
+    @property
+    def author(self):
+        return self._get_info('_author')
+
+    @property
+    def description(self):
+        return  self._get_info('_description')
+
+    @property
+    def html(self):
+        if not self._html:
+            """
+            self.webtoon_id를 사용해서
+            웹툰 title, author,description를 딕셔너리 형태로 return
+            :return:title, author, description 딕셔너리로
+            """
+            # HTML파일을 저장하거나 불러올 경로
+            file_path = 'data/episode_list-{webtoon_id}.html'.format(webtoon_id=self.webtoon_id)
+            # HTTP요청을 보낼 주소
+            url_episode_list = 'http://comic.naver.com/webtoon/list.nhn'
+            # HTTP요청시 전달할 GET Parameters
+            params = {
+                'titleId': self.webtoon_id,
+            }
+            # -> 'http://com....nhn?titleId=703845
+
+            # HTML파일이 로컬에 저장되어 있는지 검사
+            if os.path.exists(file_path):
+                # 저장되어 있다면, 해당 파일을 읽어서 html변수에 할당
+                html = open(file_path, 'rt').read()
+            else:
+                # 저장되어 있지 않다면, requests를 사용해 HTTP GET요청
+                response = requests.get(url_episode_list, params)
+                print(response.url)
+                # 요청 응답객체의 text속성값을 html변수에 할당
+                html = response.text
+                # 받은 텍스트 데이터를 HTML파일로 저장
+                open(file_path, 'wt').write(html)
+            self._html = html
+        return self._html
 
         # 공통함수는 html을 리턴하도록 한다
-
+    def set_ifno(self):
+        """
+        자신의 html속성을 파싱한 결과를 사용해
+        자신의 title, ahthor, description속성값을 할
+        :return: None
+        """
         # BeautifulSoup클래스형 객체 생성 및 soup변수에 할당
-        soup = BeautifulSoup(html, 'lxml')
+        soup = BeautifulSoup(self.html, 'lxml')
 
-        # 파일 저장하지 않고 진행하고 싶은 경우
-        # 위에 코드를 다 주석으로 변경
-        # 파일 저장안해도 되는 경우
-        # url = 'http://comic.naver.com/webtoon/list.nhn'
-        # params = {
-        #     "titleId": webtoon_id
-        # }
-        # response = requests.get(url, params)
-        # print(response.url)
-        # soup = BeautifulSoup(response.text, 'lxml')
-
-        # div.detail > h2 (제목, 작가)의
-        #  0번째 자식: 제목 텍스트
-        #  1번째 자식: 작가정보 span Tag
-        #   Tag로부터 문자열을 가져올때는 get_text()
         h2_title = soup.select_one('div.detail > h2')
         title = h2_title.contents[0].strip()
         author = h2_title.contents[1].get_text(strip=True)
         # div.detail > p (설명)
         description = soup.select_one('div.detail > p').get_text(strip=True)
 
-        # webtoon title, author, description
-        # 딕셔너리 형태로 return
-        info = dict()
-        info['title'] = title
-        info['author'] = author
-        info['description'] = description
-        return info
 
-    def episode_crawler(self):
+        # 자신의 html데이터를 사용해서 (웹에서 받아오거나, 파일에서 읽어온 결과)
+        # 자신의 속성들을 지정
+        self._title = title
+        self._author = author
+        self._description = description
+
+    def episoe_crawler(self):
         """
         webtoon_id를 매개변수로 각 에피소드의
         webtoon_id,no,title,url_thumbnail,rating 정보를 Episode 인스턴스로 생성 후
