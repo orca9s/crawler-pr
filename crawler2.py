@@ -31,6 +31,19 @@ class Episode:
         episode_url = url + parse.urlencode(params)
         return episode_url
 
+    def get_image_url_list(self):
+        
+        # 해당 에피소드의 이미지들의 URL문자열들을 리스트에 담아 리턴
+        # 1. 파일이 있는지 검사
+        #   파일명: episode_detail-{webtoon_id}-{episode_no}.html
+        #   없으면 자신의 url property값으로 requests사용 결과를 저장
+        # 2.soup객체 생성해서 ima
+        file_path = 'data/episode_detail-{webtoon_id}-{episode_no}.html'.format(
+            webtoon_id=self.webtoon_id,
+            episode_no=self.no,
+        )
+        pass
+
 
 class Webtoon:
     def __init__(self, webtoon_id):
@@ -40,7 +53,7 @@ class Webtoon:
         self._title = None
         self._author = None
         self._description = None
-        self.episode_list = list()
+        self._episode_list = list()
         self._html = ''
 
     def _get_info(self, attr_name):
@@ -94,7 +107,7 @@ class Webtoon:
         return self._html
 
         # 공통함수는 html을 리턴하도록 한다
-    def set_ifno(self):
+    def set_info(self):
         """
         자신의 html속성을 파싱한 결과를 사용해
         자신의 title, ahthor, description속성값을 할
@@ -109,54 +122,19 @@ class Webtoon:
         # div.detail > p (설명)
         description = soup.select_one('div.detail > p').get_text(strip=True)
 
-
         # 자신의 html데이터를 사용해서 (웹에서 받아오거나, 파일에서 읽어온 결과)
         # 자신의 속성들을 지정
         self._title = title
         self._author = author
         self._description = description
 
-    def episoe_crawler(self):
+    def crawl_episode_list(self):
         """
-        webtoon_id를 매개변수로 각 에피소드의
-        webtoon_id,no,title,url_thumbnail,rating 정보를 Episode 인스턴스로 생성 후
-        list에 추가하여 return
-        :return: Episode 인스턴스가 저장되어있는 List
+        자기자신의 webtoon_id에 해당하는 HTML문서에서 Episode목록을 생
+        :return:
         """
-
-        # episode_crawler는 webtoon_crawler로 생성된 html 이용
-        # HTML파일을 저장하거나 불러올 경로
-        file_path = 'data/episode_list-{webtoon_id}.html'.format(webtoon_id=self.webtoon_id)
-        # HTTP요청을 보낼 주소
-        url_episode_list = 'http://comic.naver.com/webtoon/list.nhn'
-        # HTTP요청시 전달할 GET Parameters
-        params = {
-            'titleId': self.webtoon_id,
-        }
-        # HTML파일이 로컬에 저장되어 있는지 검사
-        if os.path.exists(file_path):
-            # 저장되어 있다면, 해당 파일을 읽어서 html변수에 할당
-            html = open(file_path, 'rt').read()
-        else:
-            # 저장되어 있지 않다면, requests를 사용해 HTTP GET요청
-            response = requests.get(url_episode_list, params)
-            print(response.url)
-            # 요청 응답객체의 text속성값을 html변수에 할당
-            html = response.text
-            # 받은 텍스트 데이터를 HTML파일로 저장
-            open(file_path, 'wt').write(html)
         # BeautifulSoup클래스형 객체 생성 및 soup변수에 할당
-        soup = BeautifulSoup(html, 'lxml')
-
-        # 파일 저장안해도 되는 경우
-        # 파일 저장하지 않고 실행하고 싶다면 위의 코드를 주석처리후 사용할것!
-        # url = 'http://comic.naver.com/webtoon/list.nhn'
-        # params = {
-        #     "titleId": webtoon_id
-        # }
-        # response = requests.get(url, params)
-        # print(response.url)
-        # soup = BeautifulSoup(response.text, 'lxml')
+        soup = BeautifulSoup(self.html, 'lxml')
 
         # 에피소드 목록을 담고 있는 table
         table = soup.select_one('table.viewList')
@@ -166,7 +144,7 @@ class Webtoon:
 
         # list를 리턴하기 위해 선언
         # for문을 다 실행하면 episode_lists 에는 Episode 인스턴스가 들어가있음
-        episode_lists = list()
+        episode_list = list()
 
         # 첫 번째 tr은 thead의 tr이므로 제외, tr_list의 [1:]부터 순회
         for index, tr in enumerate(tr_list[1:]):
@@ -204,23 +182,30 @@ class Webtoon:
             )
 
             # episode_lists Episode 인스턴스들 추가
-            episode_lists.append(new_episode)
+            episode_list.append(new_episode)
+        self._episode_list = episode_list
 
-        return episode_lists
+    @property
+    def episode_list(self):
+        if not self._episode_list:
+            self.crawl_episode_list()
+        return self._episode_list
+        # self.episode_list가 빈 리스트가 아니라면
+        #   -> self.episode_list가 비어있다면
+        # self.episode_list가 비어있다면
+        # 채우는 함수를 실행해서 self.episode_list리스트에 값을 채운
+        # self.episode_list를 반환
 
-    def update(self):
-        """
-        update 함수를 실행하면 해당 webtoon_id에 따른 에피소드 정보를 list에
-        Episode 인스턴스들로 저장하고 self.episode_list 에 할당
-       :return:
-        """
-        result = self.episode_crawler()
-        self.episode_list = result
+        # 다했으면
+        # episode_list속성이름을 _episode_list로 변경
+        # 이 함수의 이름을 episode_list로 변경 후 property설정
+        pass
 
 
 if __name__ == '__main__':
     webtoon1 = Webtoon(703845)
     print(webtoon1.title)
-    webtoon1.update()
-    for episode in webtoon1.episode_list:
-        print(episode.url)
+    print(webtoon1.author)
+    print(webtoon1.description)
+    for episode in webtoon1._episode_list:
+        print(episode.title)
