@@ -32,7 +32,7 @@ class Episode:
         return episode_url
 
     def get_image_url_list(self):
-        
+        print('get_image_url_list start')
         # 해당 에피소드의 이미지들의 URL문자열들을 리스트에 담아 리턴
         # 1. 파일이 있는지 검사
         #   파일명: episode_detail-{webtoon_id}-{episode_no}.html
@@ -42,7 +42,59 @@ class Episode:
             webtoon_id=self.webtoon_id,
             episode_no=self.no,
         )
-        pass
+        print('file_path:', file_path)
+
+        if os.path.exists(file_path):
+            print('os.path.exists: True')
+            html = open(file_path, 'rt').read()
+        else:
+            print('os.path.exists: False')
+            print(' http get request, url:', self.url)
+            response = requests.get(self.url)
+            html = response.text
+            open(file_path, 'wt').write(html)
+
+        # html문자열로 BeautifulSoup객체 생성
+        soup = BeautifulSoup(html, 'lxml')
+
+        # img목록을 찾는다. 위치는 "div.wt_viewer > img"
+        img_list = soup.select('div.wt_viewer > img')
+
+        # 이미 URL(src의 값)을 저장할 리스트
+        # url_list = []
+        # for img in img_list:
+        #     url_list.append(img.get('src'))
+
+        # img목록을 순회하며 각 item(BeautifulSoup Tag object)에서
+        #  'src'속성값을 사용해 리스트 생성
+        return [img.get('src') for img in img_list]
+
+    def download_all_images(self):
+        for url in self.get_image_url_list():
+            self.download(url)
+
+    def download(self, url_img):
+        """
+        :param url_img: 실제 이미지의 URL
+        :return:
+        """
+        # 서버에서 거부하지 않도록 HTTP헤더 중 'Referer'항목을 채워서 요청
+        url_referer = f'http://comic.naver.com/webtoon/list.nhn?titleId={self.webtoon_id}'
+        headers = {
+            'Referer': url_referer,
+        }
+        response = requests.get(url_img, headers=headers)
+
+        # 이미지 URL에서 이미지명을 가져옴
+        file_name = url_img.rsplit('/', 1)[-1]
+
+        # 이미지가 저장될 폴더 경로, 폴더가 없으면 생성해준다
+        dir_path = f'data/{self.webtoon_id}/{self.no}'
+        os.makedirs(dir_path, exist_ok=True)
+
+        # 이미지가 저장될 파일 경로, 'wb'모드로 열어 이진데이터를 기록한다.
+        file_path = f'{dir_path}/{file_name}'
+        open(file_path, 'wb').write(response.content)
 
 
 class Webtoon:
