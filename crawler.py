@@ -83,9 +83,9 @@ for index, tr in enumerate(tr_list[1:]):
     # 현재 tr의 네 번째 td요소의 내용
     created_date = tr.select_one('td:nth-of-type(4)').get_text(strip=True)
 
-    # print(url_thumbnail)
-    # print(url_detail)
-    # print(title)
-    # print(rating)
-    # print(created_date)
+    print(url_thumbnail)
+    print(url_detail)
+    print(title)
+    print(rating)
+    print(created_date)
 
